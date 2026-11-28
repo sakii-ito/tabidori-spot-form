@@ -1,0 +1,504 @@
+/* ============================================================
+   ここから下はぜんぶ「見た目(デザイン)」専用のコードだ(CSS)。
+   HTMLの部品(ボタンとか入力欄とか)に、色や形、間隔を指定している。
+   JSみたいに「動く処理」はここには書かれていない。
+   ============================================================ */
+
+/* ----- :root とは？ -----
+   ページ全体で使う「色の変数」をここでまとめて定義している。
+   例えば --paper は「紙みたいな背景色」という名前の変数で、
+   あとで background:var(--paper) のように呼び出して使う。
+   変数化しておくと、色を変えたい時にここ1か所を直すだけで
+   ページ全体の色が一気に変わるので便利だ。 */
+:root{
+  --paper:#FFF9F2;
+  --paper-raised:#FFFFFF;
+  --ink:#4A3B31;
+  --ink-soft:#8A7A6B;
+  --coral:#B4D95C;
+  --coral-deep:#5E7A28;
+  --coral-tint:#EEF5D6;
+  --sky:#6FB8DB;
+  --sky-deep:#1D6E92;
+  --sky-tint:#E3F3FA;
+  --mint:#7FBE9C;
+  --mint-deep:#2E6E4C;
+  --mint-tint:#E4F3EA;
+  --sand:#F1E3D1;
+  --line:#E0CFB8;
+  --danger:#E2483D;
+  --danger-tint:#FBE4E2;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+/* 10/31追加: 다크모드 관련 CSS(@media prefers-color-scheme / data-theme) 전부 삭제함。
+   OS 설정과 상관없이 항상 위의 :root 라이트 테마(크림색)만 쓰도록 통일。 */
+/* * はページの「全部の要素」を選ぶ記号だ。
+   box-sizing:border-box は「paddingやborderを幅の中に含める」設定で、
+   これを指定しておくとレイアウト崩れが起きにくくなる(おまじない的な設定)。 */
+*{box-sizing:border-box;}
+html,body{height:100%;}
+/* 全体の字を少し大きくして読みやすくする(rem の基準) */
+html{font-size:17px;}
+body{
+  margin:0;
+  /* 背景に小さい水玉(ドット)模様を敷いている。
+     radial-gradientで「丸い点」を作り、background-sizeで
+     点と点の間隔(22px四方)を決めている。旅の地図っぽい雰囲気用。 */
+  background:
+    radial-gradient(circle, var(--line) 1px, transparent 1px);
+  background-size:22px 22px;
+  background-color:var(--paper);
+  color:var(--ink);
+  font-family:"Gowun Dodum",-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",Roboto,sans-serif;
+  line-height:1.55;
+}
+/* .wrap = ページ中身を真ん中に、幅640pxまでに収める「外枠」 */
+.wrap{
+  max-width:720px; /* 11/19: 地図のマスを大きくするため 640→720 に広げた */
+  margin:0 auto;
+  padding:22px 16px 90px;
+}
+/* .display = 見出しなど「かわいい丸っこいフォント(Jua)」を使う場所用のクラス */
+.display{font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;}
+
+/* ============================================================
+   ヘッダー部分（スーツケースの荷物タグ風デザイン）
+   ページの一番上にある、タイトルと進捗バーが入った緑色のタグだ。
+   ============================================================ */
+.tag{
+  position:relative;
+  background:var(--coral);
+  color:#33401C;
+  border-radius:18px;
+  padding:20px 22px 22px 54px;
+  margin-bottom:22px;
+  box-shadow:0 2px 0 #6E8F2E;
+}
+/* .tag::before / ::after は「タグに穴とミシン目線を描く」ための
+   見えない飾りパーツだ。HTMLには書かれていない、CSSだけで
+   追加される架空の要素(擬似要素)なので、HTML側を探しても出てこない。
+   ::before = タグの穴（丸いリング）を描く */
+.tag::before{
+  content:"";
+  position:absolute;
+  left:20px;
+  top:50%;
+  transform:translateY(-50%);
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:var(--paper);
+  box-shadow:inset 0 0 0 2px #6E8F2E;
+}
+/* ::after = タグの点線（ミシン目）を描く */
+.tag::after{
+  content:"";
+  position:absolute;
+  left:36px;
+  top:12px;
+  bottom:12px;
+  border-left:2px dashed rgba(0,0,0,0.2);
+}
+.tag h1{
+  font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-weight:400;
+  font-size:1.5rem;
+  margin:0 0 2px;
+}
+.tag p{
+  margin:0;
+  font-size:0.88rem;
+  opacity:0.92;
+}
+
+/* .route = 「あと何件集めた？」を表す進捗バー（ピンのアイコンが動く） */
+.route{
+  margin-top:16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.route-track{
+  position:relative;
+  flex:1;
+  height:6px;
+  border-radius:999px;
+  background:rgba(0,0,0,0.15);
+}
+.route-fill{
+  height:100%;
+  border-radius:999px;
+  background:#6E8F2E;
+  transition:width .3s ease;
+}
+/* .route-pin = バーの上をスライドして動く「地図ピン」のアイコン。
+   left の値(%)をJS側で変えることで、左右にスルスル移動する */
+.route-pin{
+  position:absolute;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:18px;
+  height:18px;
+  transition:left .3s ease;
+}
+.route-count{
+  font-family:"Jua","Apple SD Gothic Neo",sans-serif;
+  font-weight:400;
+  font-size:1rem;
+  white-space:nowrap;
+}
+
+/* ============================================================
+   ポストカード風の入力フォーム本体
+   入力フォーム全体を「はがき」のような見た目のカードに入れている。
+   ============================================================ */
+.postcard{
+  position:relative;
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:22px 20px;
+  margin-bottom:22px;
+  overflow:hidden;
+}
+/* .tape = ポストカードの左上に貼ってある「マスキングテープ」っぽい飾り。
+   repeating-linear-gradientで斜めストライプ模様を作っている */
+.tape{
+  position:absolute;
+  top:-8px;
+  left:28px;
+  width:70px;
+  height:26px;
+  background:repeating-linear-gradient(135deg, var(--mint-tint), var(--mint-tint) 6px, var(--sand) 6px, var(--sand) 12px);
+  opacity:0.9;
+  transform:rotate(-4deg);
+  border-radius:3px;
+}
+.section{
+  margin-top:22px;
+}
+.section:first-of-type{margin-top:6px;}
+.section-head{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:12px;
+}
+.section-dot{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--coral);
+  flex-shrink:0;
+}
+.section-head h2{
+  font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-weight:400;
+  font-size:1.08rem;
+  margin:0;
+}
+.hint{
+  font-size:0.78rem;
+  color:var(--ink-soft);
+  margin:-6px 0 12px;
+}
+
+/* .grid = 入力欄を「2列」に並べるための設定。
+   .field.full をつけた項目だけは1行まるごと(2列分)使う */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field.full{grid-column:1/-1;}
+label{font-size:0.82rem;color:var(--ink-soft);}
+/* label.req = 「必須項目」のラベルの後ろに赤い * を自動で表示する */
+label.req::after{content:" *";color:var(--coral-deep);}
+
+/* 文字入力欄・プルダウン・テキストエリアの共通デザイン */
+input[type=text],input[type=url],input[type=number],input[type=time],select,textarea{
+  width:100%;
+  padding:9px 11px;
+  border-radius:10px;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:0.92rem;
+  font-family:inherit;
+}
+textarea{resize:vertical;min-height:46px;}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--coral);
+  box-shadow:0 0 0 3px var(--coral-tint);
+}
+
+/* ----- 定休日ボタン（月・火・水…の丸いボタン） -----
+   押すと色がつく・もう一回押すと元に戻る「トグルボタン」だ。
+   .on というクラスがついているかどうかで見た目が変わる
+   （実際にON/OFFを切り替える処理はJS側にある） */
+.day-row{display:flex;gap:6px;flex-wrap:wrap;}
+.day-chip{
+  width:40px;height:40px;
+  border-radius:50%;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:0.85rem;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.day-chip.on{
+  background:var(--coral);
+  border-color:var(--coral);
+  color:var(--paper-raised);
+  font-weight:700;
+}
+
+/* ----- 入場料の「有料/無料」切り替えスイッチ -----
+   スマホの設定画面にあるような丸いON/OFFスイッチの見た目だ。
+   .switch.on がついている時だけ、丸いつまみが右に移動する */
+.switch-row{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:4px;
+}
+.switch{
+  position:relative;width:46px;height:26px;
+  border-radius:999px;background:var(--line);
+  cursor:pointer;flex-shrink:0;
+  transition:background .2s ease;
+}
+.switch.on{background:var(--mint);}
+.switch::after{
+  content:"";
+  position:absolute;top:3px;left:3px;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--paper-raised);
+  transition:left .2s ease;
+  box-shadow:0 1px 2px rgba(0,0,0,0.2);
+}
+.switch.on::after{left:23px;}
+.switch-label{font-size:0.9rem;font-weight:600;}
+/* .fee-fields = スイッチがOFFの間は隠しておく「料金入力エリア」。
+   .show クラスがついた時だけ display:block で表示される */
+.fee-fields{
+  display:none;
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px dashed var(--line);
+}
+.fee-fields.show{display:block;}
+/* .ticket-row = 「チケット種類」1件分(平日券・休日券など)の入力欄をまとめた箱。
+   JSの addTicketRow() 関数が、押すたびにこの箱をコピーして増やしていく */
+.ticket-row{
+  position:relative;
+  background:var(--sand);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px 38px 12px 12px;
+  margin-bottom:10px;
+}
+.ticket-row .grid{grid-template-columns:1fr 1fr;gap:8px;}
+.ticket-row .field.full{grid-column:1/-1;}
+.ticket-row-remove{
+  position:absolute;top:8px;right:8px;
+  width:24px;height:24px;border-radius:50%;
+  border:none;background:var(--paper);
+  color:var(--danger);font-size:0.9rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.ticket-row-remove:hover{background:var(--danger-tint);}
+.btn-small{
+  padding:7px 14px;font-size:0.82rem;
+}
+
+/* ----- 太ったピル型の「タグ」ボタン（야경・전망좋음 など） -----
+   定休日ボタンと同じ「押すとON/OFFが切り替わる」仕組みだ。
+   色がついた(.on)タグだけが、最終的に保存される時に選ばれる */
+.tag-group{margin-bottom:14px;}
+.tag-group-label{
+  font-size:0.78rem;
+  color:var(--ink-soft);
+  margin-bottom:7px;
+}
+.chip-row{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{
+  padding:6px 13px;
+  border-radius:999px;
+  border:1.5px solid var(--line);
+  background:var(--paper);
+  color:var(--ink);
+  font-size:0.82rem;
+  cursor:pointer;
+  user-select:none;
+}
+.chip.on{
+  background:var(--sky);
+  border-color:var(--sky);
+  color:#06313F;
+  font-weight:700;
+}
+
+.actions{
+  display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;
+}
+button{
+  font-family:inherit;font-size:0.92rem;
+  border-radius:999px;border:none;
+  padding:11px 20px;cursor:pointer;
+}
+.btn-primary{
+  background:var(--coral);color:var(--paper-raised);
+  font-weight:700;
+  box-shadow:0 2px 0 var(--coral-deep);
+}
+.btn-ghost{
+  background:var(--paper);
+  border:1.5px solid var(--line);
+  color:var(--ink);
+}
+.error-text{
+  font-size:0.78rem;color:var(--danger);
+  margin-top:2px;
+}
+
+/* ============================================================
+   保存済みスポット一覧（下に表示される「チケット風カード」たち）
+   フォームを送信すると、ここに1件ずつカードが追加されていく。
+   ============================================================ */
+.list-head{display:flex;align-items:center;gap:8px;margin:0 0 14px 4px;}
+.list-head h2{
+  font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-weight:400;font-size:1.15rem;margin:0;
+}
+.empty{
+  text-align:center;color:var(--ink-soft);
+  font-size:0.9rem;
+  border:1.5px dashed var(--line);
+  border-radius:14px;
+  padding:30px 14px;
+}
+/* .ticket = 1件のスポットを表す「チケット」カード本体。
+   中が左右2つに分かれていて、左(.ticket-main)に情報、
+   右(.ticket-stub)に削除ボタンが入っている「もぎり」デザインだ */
+.ticket{
+  position:relative;
+  display:flex;
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.ticket-main{flex:1;padding:14px 16px;min-width:0;}
+.ticket-stub{
+  width:44px;flex-shrink:0;
+  background:var(--sand);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  border-left:2px dashed var(--line);
+}
+.ticket-stub button{
+  background:none;border:none;
+  color:var(--danger);
+  font-size:1.1rem;
+  cursor:pointer;
+  padding:6px;
+  border-radius:8px;
+}
+.ticket-stub button:hover{background:var(--danger-tint);}
+/* 10/23추가: 수정(✎) 버튼은 삭제(✕)랑 색을 다르게 해서 구분되게 함 */
+.ticket-stub button.edit-btn{color:var(--sky-deep);}
+.ticket-stub button.edit-btn:hover{background:var(--sky-tint);}
+.ticket-top{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+}
+.ticket-name{font-weight:700;font-size:1rem;}
+.ticket-cat{
+  font-size:0.72rem;font-weight:700;
+  background:var(--coral-tint);color:var(--coral-deep);
+  border-radius:999px;padding:2px 9px;
+  white-space:nowrap;
+}
+.ticket-meta{
+  margin-top:7px;font-size:0.83rem;color:var(--ink-soft);
+  display:flex;flex-direction:column;gap:3px;
+}
+.ticket-meta b{color:var(--ink);font-weight:600;}
+.ticket-meta a{color:var(--sky-deep);}
+.ticket-tags{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;}
+.sticker{
+  font-size:0.72rem;
+  background:var(--mint-tint);color:var(--mint-deep);
+  border-radius:999px;padding:2px 9px;
+}
+.ticket-img{
+  width:100%;max-height:140px;object-fit:cover;
+  border-radius:10px;margin-top:10px;
+}
+
+/* .toast = 「담았어요!」みたいに画面下にポッと一瞬出るお知らせ。
+   .show クラスがついた時だけ opacity:1 になってフワッと表示される
+   （JSのshowToast()関数が、このクラスを付けたり消したりしている） */
+.toast{
+  position:fixed;left:50%;bottom:24px;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:var(--paper);
+  padding:10px 18px;border-radius:999px;
+  font-size:0.85rem;opacity:0;pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;
+  z-index:50;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ============================================================
+   11/03追加: 都道府県タイルマップ（どこを入力済みか一目で分かる地図）
+   47都道府県を1マスずつ、日本の形っぽく並べている。
+   件数0=点線の白マス / 1件=きみどり / 2件以上=濃い緑
+   ============================================================ */
+.map-card{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:18px 16px 16px;
+  margin-bottom:22px;
+}
+.map-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.map-head h2{font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-weight:400;font-size:1.15rem;margin:0;}
+.map-count{font-family:"Jua","Apple SD Gothic Neo",sans-serif;font-weight:400;font-size:1rem;color:var(--coral-deep);}
+/* 14列×11行のマス目。マスの位置はJS側で grid-column / grid-row を指定して置く */
+.pref-map{
+  display:grid;
+  grid-template-columns:repeat(14,1fr);
+  grid-template-rows:repeat(11,auto);
+  gap:3px;
+}
+.pref-tile{
+  aspect-ratio:1;
+  border-radius:6px;
+  border:1.5px dashed var(--line);
+  background:var(--paper);
+  color:var(--ink-soft);
+  /* 11/19: 県名を見やすくするため、丸くて太いJuaにして少し大きくした */
+  font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  font-size:0.66rem;
+  letter-spacing:-0.04em; /* 4文字の県名がはみ出ないように少し詰める */
+  line-height:1.05;
+  padding:1px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+  cursor:pointer;
+  word-break:keep-all;
+  overflow:hidden;
+}
+.pref-tile .n{font-weight:400;font-size:0.78rem;}
+.pref-tile.lv1{background:var(--coral);border:1.5px solid var(--coral);color:#33401C;}
+.pref-tile.lv2{background:var(--coral-deep);border:1.5px solid var(--coral-deep);color:#fff;}
+.map-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:0.75rem;color:var(--ink-soft);}
+.map-legend span{display:inline-flex;align-items:center;gap:4px;}
+.map-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;}
+.map-missing{margin-top:10px;font-size:0.8rem;color:var(--ink-soft);word-break:keep-all;}
+.map-missing b{color:var(--ink);}
+.map-warn{margin-top:8px;font-size:0.8rem;color:var(--danger);}
+
+@media (max-width:460px){
+  .grid{grid-template-columns:1fr;}
+  .pref-tile{font-size:0.45rem;}
+  .pref-tile .n{font-size:0.5rem;}
+}
